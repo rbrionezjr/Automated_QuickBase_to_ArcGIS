@@ -11,6 +11,12 @@ from arcgis.gis import GIS
 from collections import defaultdict
 import time
 
+# Change Log - 02-12-2026
+""" - Created a GIT repository for version control and collaboration.
+    - Added change log.
+"""
+
+
 # ==== LOGGING CONFIGURATION ====
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 log = logging.getLogger("qb_arc_sync")

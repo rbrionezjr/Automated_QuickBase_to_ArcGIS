@@ -79,6 +79,25 @@ MDU_FIELD_MAPPING = {
     "Status": "projectpha"
 }
 
+# ===== QUCIKBASE PERMIT TABLE REFERENCE AND SETUP =====
+PERMIT_TABLE_ID = "bts3c49gt"
+FDH_LAYER_ITEM_ID = "577f024964b844b7836402bf1f84b01f"
+PERMIT_MATCH_FIELD = "FDH_ID"
+
+PERMIT_QB_FIELDS = {
+    3: "Record ID#", # recordid data type
+    9: "Permit Type", # text / multiple choice
+    11: "Permit Applied Date", # date
+    13: "Permit Issued Date", # date
+    16: "Status", # text / multiple choice
+    30: "FDH Engineering ID", # text
+    35: "Permit #" # text
+}
+
+PERMIT_FIELD_MAPPING = {
+
+}
+
 # -----------------------------------------------
 # Global Metrics and Helpers for logs to Teams
 # ------------------------------------------------

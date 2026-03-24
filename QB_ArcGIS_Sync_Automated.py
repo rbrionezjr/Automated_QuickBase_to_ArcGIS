@@ -11,6 +11,9 @@ from arcgis.gis import GIS
 from collections import defaultdict
 import time
 
+# Change Log - 03-10-2026
+""" - Updated field ids for quickbase, see comments in QB_FIELDS."""
+
 # Change Log - 02-12-2026
 """ - Created a GIT repository for version control and collaboration.
     - Added change log.
@@ -23,20 +26,23 @@ log = logging.getLogger("qb_arc_sync")
 
 # ==== QUICKBASE FDH TABLE REFERENCE AND SETUP ====
 QB_TABLE_ID = "bts3c49e9"
-LAYER_ITEM_ID = "8f910db1cc0145f286a31e69f87534bb"
+LAYER_ITEM_ID = "7d7d901218d54a11b3bb7c3077876457"  # <--- Updated 03-13-2026
 MATCH_FIELD = "FDH_ID"
 
 QB_FIELDS = {
     3: "QB_Record_ID",
     12: "FDH Friendly Name",
-    13: "FDH_ID_QB",
-    14: "FDH Status",
-    23: "City ID",
+    13: "FDH_ID_QB",            # <--- No longer used | 03-13-2026
+    # 14: "FDH Status",         # <--- "ARC_GIS_Status" in Quickbase
+    23: "City ID", 
     24: "OFS Date",
-    254: "CX Start Date",
+    254: "CX Start Date",       # <--- CX Start Date is "CX Start" in Quickbase.
     262: "Project Number",
-    221: "CX Vendor",
-    325: "PM"
+    757: "CX Vendor",           # <--- Updated to field 757 - "Construction Vendor"
+    743: "Phase",               # <--- New: Added 03-13-2026
+    745: "Stage",               # <--- New: Added 03-13-2026
+    747: "Status",              # <--- New: Added 03-13-2026
+    798: "PM"                   # <--- Updated to field 798 - "Project Manager"
 }
 
  # ---- MAPPING QUICKBASE FIELDS TO ARCGIS ATTRIBUTE TABLE FIELDS ----
@@ -46,15 +52,17 @@ FIELD_MAPPING = {
     "Project Number": "ProjectNum",
     "City ID": "City_Code",
     "CX Vendor": "Const_Ven",
-    "FDH Status": "projectpha",
-    "PM": "Market_Lead"
+    "Phase": "projectpha",
+    "PM": "Market_Lead",
+    "Stage": "Stage",
+    "Status": "Status"
 }
 
 QB_TO_ARC_FIELDS = list(FIELD_MAPPING.keys())
 
 # ==== QUICKBASE MDU TABLE REFERENCE AND SETUP ====
 MDU_TABLE_ID = "bva6wfne6"
-MDU_LAYER_ITEM_ID = "e7b6ecc1cfaa4ab9b77491df33ed10e5"
+MDU_LAYER_ITEM_ID = "83e74ca27a54456f8e2a1cc9c206acc4"  # <--- Updated 03-13-2026
 MDU_MATCH_FIELD = "MDU_id"
 
 MDU_QB_FIELDS = {
@@ -81,7 +89,7 @@ MDU_FIELD_MAPPING = {
 
 # ===== QUCIKBASE PERMIT TABLE REFERENCE AND SETUP =====
 PERMIT_TABLE_ID = "bts3c49gt"
-FDH_LAYER_ITEM_ID = "8f910db1cc0145f286a31e69f87534bb"
+FDH_LAYER_ITEM_ID = "7d7d901218d54a11b3bb7c3077876457"  # <--- Updated 03-13-2026
 PERMIT_MATCH_FIELD = "FDH_ID"
 
 PERMIT_QB_FIELDS = {
@@ -530,7 +538,27 @@ def run_fdh_sync(gis, qb_token, batch_size=200, dry_run=False, fdh_ids=None):
     item = gis.content.get(LAYER_ITEM_ID)
     if not item:
         raise SystemExit(f"Could not find FDH ArcGIS item {LAYER_ITEM_ID}")
+    
+    log.info("FDH item title: %s", item.title)
+    log.info("FDH item type: %s", item.type)
+
+    for idx, lyr in enumerate(item.layers):
+        log.info("Layer %s name=%s url=%s", idx, getattr(lyr.properties, "name", None), lyr.url)
+    
     layer = item.layers[0]
+
+    try:
+        test = layer.query(where="1=1", return_geometry=False, result_record_count=1)
+        log.info("Basic query OK. Returned %s feature(s).", len(test.features))
+    except Exception as e:
+        log.exception("Basic layer query failed for url=%s", layer.url)
+        raise
+
+    # **** DEBUG ****
+    # qb_ids = sorted(set(str(r.get("FDH_ID_QB")).strip() for r in qb_rows if r.get("FDH_ID_QB")))
+    # log.info("QB FDH_ID_QB count: %s", len(qb_ids))
+    # log.info("QB FDH_ID_QB sample: %r", qb_ids[:10])
+    # features = chunked_arc_query(layer, MATCH_FIELD, qb_ids, chunk_size=25)
 
     if fdh_ids:
         # debug override
@@ -540,7 +568,7 @@ def run_fdh_sync(gis, qb_token, batch_size=200, dry_run=False, fdh_ids=None):
         log.info("FDH override: syncing %s FDHs from --fdh-ids", len(features))
     else:
         qb_ids = sorted(set(str(r.get("FDH_ID_QB")).strip() for r in qb_rows if r.get("FDH_ID_QB")))
-        features = chunked_arc_query(layer, MATCH_FIELD, qb_ids, chunk_size=250)
+        features = chunked_arc_query(layer, MATCH_FIELD, qb_ids, chunk_size=25)
 
     METRICS["fdh_arc_features"] = len(features)
 
@@ -564,7 +592,7 @@ def run_mdu_sync(gis, qb_token, batch_size=200, dry_run=False):
     layer = item.layers[0]
 
     qb_ids = sorted(set(str(r.get("MDU ID")).strip() for r in qb_rows if r.get("MDU ID")))
-    features = chunked_arc_query(layer, MDU_MATCH_FIELD, qb_ids, chunk_size=250)
+    features = chunked_arc_query(layer, MDU_MATCH_FIELD, qb_ids, chunk_size=25)
 
     METRICS["mdu_arc_features"] = len(features)
 
